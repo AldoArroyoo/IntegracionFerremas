@@ -3,7 +3,7 @@ const express = require("express")
 const app = express()
 app.use(express.json())
 app.get("/",(request, response)=>{
-    response.send("<p>api lanzada</p>")
+    response.send("<p>api login funcionando correctamente</p>")
 })
 app.use("/1.0/", require("./router/usuarioRouter"))
 const port = 3001
