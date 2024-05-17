@@ -4,7 +4,12 @@ class Pedido {
         this.fecha = fecha,
         this.total_pedido = total_pedido, 
         this.estado = estado,
-        this.cliente = cliente
+        this.cliente = cliente,
+        this.detalles = [];
+    }
+
+    agregarDetalle(detalle) {
+        this.detalles.push(detalle);
     }
 
     toJSON(){
@@ -13,7 +18,8 @@ class Pedido {
             fecha: this.fecha,
             total_pedido: this.total_pedido,
             estado: this.estado,
-            cliente: this.cliente
+            cliente: this.cliente,
+            detalles: this.detalles
         }
     }
 }

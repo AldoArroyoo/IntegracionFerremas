@@ -1,73 +1,80 @@
-const { abrirConexion, ErrorDBA } = require("../database.js")
-const Producto = require("../models/Producto.js")
-const Pedido = require("../models/Producto.js")
+const { abrirConexion, ErrorDBA } = require("../database.js");
+const Pedido = require("../models/Pedido.js");
+const DetallePedido = require("../models/DetallePedido.js");
 
 Pedido.crearPedido = async (req, res) => {
-    //const { cliente_id, producto_id, cantidad, precio_total } = req.body;
     let connection;
 
     try {
-
         const { usuario, fecha, estado, detalles } = req.body;
 
+        // Verifica que venga detalles
         if (!detalles || !Array.isArray(detalles)) {
             return res.status(400).json({ mensaje: 'Detalles del pedido son requeridos y deben ser un array' });
         }
 
-        // Calcular el total del pedido
-        let totalPedido = 0;
-        for (const detalle of detalles) {
-            totalPedido += detalle.cantidad * detalle.precio;
-        }
-
         connection = await abrirConexion();
 
-        // Inserta el pedido
+        // Crea el objeto Pedido
+        const pedido = new Pedido(0, usuario, fecha, 0, estado);
+
+        //Inserta el pedidio en la base de datos
         const sqlPedido = 'INSERT INTO PEDIDO (fecha, total_pedido, estado, run) VALUES (?, ?, ?, ?)';
-        const [pedidoResult] = await connection.execute(sqlPedido, [fecha, totalPedido, estado, usuario]);
+        const [pedidoResult] = await connection.execute(sqlPedido, [fecha, 0, estado, usuario]);
 
-        // Extrae el codigo del pedido recien creado para si poder crear los detalles del pedido
-        const cod_pedido = pedidoResult.insertId;
-
+        pedido.cod_pedido = pedidoResult.insertId;
         
-        // Insertar los detalles del pedido
-        const sqlDetalle = `INSERT INTO DETALLE_PEDIDO (cod_pedido, cod_producto, cantidad, precio, total_detalle)
+        // Procesa los detalles del pedido y retorna el total del pedido
+        pedido.total_pedido = await procesarDetalles(connection, detalles, pedido);
+
+        // Actualiza el pedido para que tenga el total calculado al crear los detalles
+        const sqlUpdatePedido = 'UPDATE PEDIDO SET total_pedido = ? WHERE cod_pedido = ?;';
+        await connection.execute(sqlUpdatePedido, [pedido.total_pedido, pedido.cod_pedido]);
+
+        await connection.commit();
+
+        //Extrae los detalles del pedido creado para poder retornarlo
+        const [detallesPedido] = await connection.execute('SELECT * FROM DETALLE_PEDIDO WHERE cod_pedido = ?', [pedido.cod_pedido]);
+
+        pedido.detalles = detallesPedido;
+        
+        res.status(201).json(pedido);
+
+    } catch (error) {
+        console.error(error);
+        if (connection) await connection.rollback();
+        const mensajeError = error instanceof ErrorDBA ? error : { mensaje: 'Error interno del servidor' };
+        res.status(500).json(mensajeError);
+    } finally {
+        if (connection) {
+            await connection.end();
+        }
+    }
+};
+
+
+const procesarDetalles = async (connection, detalles, pedido) => {
+    let total_pedido = 0;
+    const sqlDetalle = `INSERT INTO DETALLE_PEDIDO (cod_pedido, cod_producto, cantidad, precio, total_detalle)
                         VALUES (?, ?, ?, ?, ?)
                         ON DUPLICATE KEY UPDATE
                             cantidad = cantidad + VALUES(cantidad),
                             total_detalle = cantidad * precio`;
-        for (const detalle of detalles) {
-            await connection.execute(sqlDetalle, [cod_pedido, detalle.cod_producto, detalle.cantidad, detalle.precio, detalle.cantidad * detalle.precio]);
-        }
 
-        await connection.commit();
+    for (const detalle of detalles) {
+        const [productoResult] = await connection.execute('SELECT precio FROM PRODUCTO WHERE cod_producto = ?', [detalle.producto]);
+        const precioProducto = productoResult[0].precio;
+        
+        const detallePedido = new DetallePedido(detalle.cantidad, precioProducto, pedido.cod_pedido, detalle.producto);
+        pedido.agregarDetalle(detallePedido);
 
-         // Obtén los detalles del pedido recién creado
-        const detallesPedido = await connection.execute('SELECT * FROM DETALLE_PEDIDO WHERE cod_pedido = ?', [cod_pedido]);
+        await connection.execute(sqlDetalle, [detallePedido.pedido, detallePedido.producto, detallePedido.cantidad, detallePedido.precio, detallePedido.total_detalle]);
 
-        const pedidoCreado = {
-            cod_pedido: cod_pedido,
-            usuario,
-            fecha,
-            estado,
-            detalles: detallesPedido[0]
-        };
-    
-        res.status(201).json(pedidoCreado);
+        total_pedido += detallePedido.total_detalle;
 
-    } catch (error) {
-        console.log(error)
-        if (error instanceof ErrorDBA) {
-            return response.status(500).json(error)
-        } else {
-            return response.status(500).json(error)
-        }
-    }finally {
-        if (connection) {
-            await connection.end();  // Cierra la conexión
-        }
     }
-}
+    return total_pedido;
+};
 
 
 module.exports = Pedido;

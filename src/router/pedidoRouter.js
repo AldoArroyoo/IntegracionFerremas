@@ -5,7 +5,9 @@ const router = Router()
 
 
 
-router.post("/pedido", Pedido.crearPedido);
+router.post("/", Pedido.crearPedido);
+
+
 
 
 module.exports = router;

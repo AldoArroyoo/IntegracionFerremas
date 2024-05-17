@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "concurrently \"nodemon src/index_usuario.js\" \"nodemon src/index_producto.js\""
+    "dev": "concurrently \"nodemon src/index_usuario.js\" \"nodemon src/index_producto.js\" \"nodemon src/index_pedido.js\""
   },
   "author": "",
   "license": "ISC",
