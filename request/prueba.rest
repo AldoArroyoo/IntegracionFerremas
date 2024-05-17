@@ -5,3 +5,9 @@ content-type: application/json
     "correo": "gio.barra@duocuc.cl",
     "contrasenia": "87654321"
 }
+
+###
+
+POST http://localhost:3002/1.0/productos/traerEspecifico/1
+content-type: application/json
+

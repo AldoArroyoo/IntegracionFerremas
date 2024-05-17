@@ -6,14 +6,15 @@ class ErrorPersonalizado extends Error {
 }
 
 class Producto {
-    constructor(cod_producto, nom_producto, codigo, precio, modelo, tipo_prod, promocion){
+    constructor(cod_producto, nom_producto, codigo, precio, descuento, tipo, modelo , estado){
         this.cod_producto = cod_producto;
         this.validarNombreProducto(nom_producto);
         this.validarCodigo(codigo);
         this.validarPrecio(precio);
+        this.descuento = descuento;
+        this.tipo = tipo;
         this.modelo = modelo;
-        this.tipo_producto = tipo_prod;
-        this.promocion = promocion;
+        this.estado = estado;
     }
     
     to_json(){
@@ -22,9 +23,10 @@ class Producto {
             "nom_producto": this.nom_producto,
             "codigo": this.codigo,
             "precio": this.precio,
-            "cod_modelo": this.modelo.to_json(),
-            "tipo_prod": this.tipo_producto.to_json(),
-            "promocion": this.promocion,
+            "descuento": this.descuento,
+            "tipo": this.tipo.to_json(),
+            "modelo": this.modelo.to_json(),
+            "estado": this.estado.to_json(),
         } 
         return json
     }
