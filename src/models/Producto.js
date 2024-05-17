@@ -6,7 +6,7 @@ class ErrorPersonalizado extends Error {
 }
 
 class Producto {
-    constructor(cod_producto, nom_producto, codigo, precio, descuento, tipo, modelo , estado){
+    constructor(cod_producto, nom_producto, codigo, precio, descuento, tipo, modelo , estado, categoria){
         this.cod_producto = cod_producto;
         this.validarNombreProducto(nom_producto);
         this.validarCodigo(codigo);
@@ -15,6 +15,7 @@ class Producto {
         this.tipo = tipo;
         this.modelo = modelo;
         this.estado = estado;
+        this.categoria = categoria;
     }
     
     to_json(){
@@ -27,6 +28,7 @@ class Producto {
             "tipo": this.tipo.to_json(),
             "modelo": this.modelo.to_json(),
             "estado": this.estado.to_json(),
+            "categoria": this.categoria.to_json()
         } 
         return json
     }

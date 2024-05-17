@@ -8,6 +8,6 @@ content-type: application/json
 
 ###
 
-POST http://localhost:3002/1.0/productos/traerEspecifico/1
+POST http://localhost:3002/1.0/productos/traerPorEstado/1
 content-type: application/json
 

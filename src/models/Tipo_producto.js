@@ -1,8 +1,7 @@
 class Tipo_producto {
-    constructor(cod_tipo, nom_tipo, categoria) {
+    constructor(cod_tipo, nom_tipo) {
         this.cod_tipo = cod_tipo,
-            this.nom_tipo = nom_tipo,
-            this.categoria = categoria
+            this.nom_tipo = nom_tipo
     }
 
 
@@ -10,7 +9,6 @@ class Tipo_producto {
         const json = {
             "cod_tipo": this.cod_tipo,
             "nom_tipo": this.nom_tipo,
-            "categoria": this.categoria.to_json()
         }
         return json
     }
