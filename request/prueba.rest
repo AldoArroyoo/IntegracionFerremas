@@ -2,12 +2,27 @@ POST http://localhost:3001/1.0/login/
 content-type: application/json
 
 {
-    "correo": "gio.barra@duocuc.cl",
-    "contrasenia": "87654321"
+    "correo": "ald@gmail.com",
+    "contrasenia": "12345"
 }
 
 ###
 
 POST http://localhost:3002/1.0/productos/traerPorEstado/1
 content-type: application/json
+
+
+###
+
+POST http://localhost:3001/1.0/register/
+content-type: application/json
+
+{
+    "run": "20749760-6",
+    "nombre": "Aldo Arroyo",
+    "correo": "ald@gmail.com",
+    "contrasenia": "12345",
+    "es_empleado": false,
+    "cod_especialidad": ""
+}
 

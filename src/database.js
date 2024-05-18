@@ -14,6 +14,19 @@ class ErrorDBA extends Error {
     }
 }
 
+class ErrorConexionDBA extends ErrorDBA {
+    constructor(mensaje) {
+        super(mensaje);
+        this.name = "ErrorConexionDBA";
+    }
+}
+
+class ErrorConsultaDBA extends ErrorDBA {
+    constructor(mensaje) {
+        super(mensaje);
+        this.name = "ErrorConsultaDBA";
+    }
+}
 
 // Conexion a la base de datos
 async function abrirConexion () {

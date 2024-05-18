@@ -1,11 +1,12 @@
 const { Router } = require("express");
 const Pedido = require("../controller/pedidoController.js");
+const authenticateToken = require('../middleware/authMiddleware'); 
 
 const router = Router()
 
 
 
-router.post("/", Pedido.crearPedido);
+router.post("/", authenticateToken, Pedido.crearPedido);
 
 
 
