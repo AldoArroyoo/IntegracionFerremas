@@ -35,6 +35,13 @@ class ErrorTraerEspecifico extends Error {
     }
 }
 
+class ErrorModificarEstado extends Error {
+    constructor(mensaje) {
+        super(mensaje);
+        this.name = "ErrorModificarEstado";
+    }
+}
+
 Producto.traerPorCategoria = async (request, response) => {
     const cod_categoria = request.params.cod
     const productos = []
@@ -336,41 +343,73 @@ console.log(error)
 };
 
 
-
-Producto.modificar = async (request, response) => {
-    const { cod_estado, precio, descuento, cod_producto } = request.body
-    
+Producto.modificarEstado = async (request, response) => {
+    const cod_producto = request.params.cod
+    const { nuevo_estado, nuevo_descuento } = request.body
     var connection = null
 
     try {
         connection = await abrirConexion()
 
-        var Query = `UPDATE PRODUCTO
-                    SET cod_estado = ?, precio = ?, descuento = ?
-                    WHERE cod_producto = ?`
-        
-        values = [cod_estado, precio, descuento, cod_producto]
+        // Obtener el precio actual del producto
+        var precioQuery = `SELECT precio FROM PRODUCTO WHERE cod_producto = ?`
+        const values = [cod_producto]
+        const [filas, otros] = await connection.query(precioQuery, values)
+        const precioActual = filas[0]
 
-        const [filas, otro] = await connection.query(Query, values)
+        // Calcular el nuevo precio si el estado pasa de 1 a 2
+        var nuevoPrecio = precioActual.precio
+        if (nuevo_estado === 2) {
+            const estadoAnteriorQuery = `SELECT cod_estado, descuento FROM PRODUCTO WHERE cod_producto = ?`
+            values2 = [cod_producto]
+            const [filas, otros] = await connection.query(estadoAnteriorQuery, values2);
+            const estadoAnterior = filas[0].cod_estado;
+            if (estadoAnterior === 1) {
+                nuevoPrecio = (precioActual.precio * 100) / 95 
+            }else if (estadoAnterior === 3){
+                nuevoPrecio = (precioActual.precio *100 /(100 - filas[0].descuento))
+            } 
 
+console.log(filas[0].descuento)
+
+        } else if (nuevo_estado === 3) {
+            const estadoAnteriorQuery = `SELECT cod_estado FROM PRODUCTO WHERE cod_producto = ?`
+            values3 = [cod_producto]
+            const [filas, otros] = await connection.query(estadoAnteriorQuery, values3)
+            const estadoAnterior = filas[0].cod_estado
+            if (estadoAnterior === 1 || estadoAnterior === 2) {
+                nuevoPrecio = precioActual.precio - (precioActual.precio * (nuevo_descuento/100))
+            }
+        }
+
+        // Actualizar el estado y el precio del producto
+        const updateQuery = `UPDATE PRODUCTO SET cod_estado = ?, precio = ?, descuento = ? WHERE cod_producto = ?`;
+        const [resultado] = await connection.query(updateQuery, [nuevo_estado, nuevoPrecio, nuevo_descuento, cod_producto]);
+
+        if (resultado.affectedRows === 0) {
+            throw new ErrorModificarEstado("No se encontró el producto o no se pudo actualizar el estado");
+        }
+
+        return response.status(202).json("Estado del producto actualizado correctamente" );
     } catch (error) {
         console.log(error)
-                if (error instanceof ErrorDBA) {
-                    return response.status(500).json(error.message)
-        
-                }else if (error instanceof ErrorTraerEspecifico) {
-                    return response.status(500).json(error.message)
-        
-                } else {
-                    return response.status(500).json(error)
-                }
-            }
-            finally {
-                if (connection) {
-                    connection.release()
-                }
-            }
-        };
+        if (error instanceof ErrorDBA) {
+            return response.status(500).json(error.message)
 
+        } else if (error instanceof ErrorModificarEstado) {
+            return response.status(500).json(error.message)
+
+        } else {
+            return response.status(500).json(error)
+        }
+    } finally {
+        if (connection) {
+            connection.release()
+        }
+    }
+};
 
 module.exports = Producto
+
+
+

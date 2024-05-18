@@ -15,4 +15,7 @@ router.route("/traerPorMarca/:cod")
 router.route("/traerEspecifico/:cod")
     .post(Producto.traerEspecifico)
 
+router.route("/modificarEstado/:cod")
+    .post(Producto.modificarEstado)
+
 module.exports = router
