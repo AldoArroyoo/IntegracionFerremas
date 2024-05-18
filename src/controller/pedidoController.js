@@ -77,6 +77,7 @@ const procesarDetalles = async (connection, detalles, pedido) => {
     return total_pedido;
 };
 
+//Ver si se aplica
 Pedido.actualizarEstado = async (req, res) => {
     let connection;
     try {
