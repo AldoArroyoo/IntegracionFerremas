@@ -6,6 +6,7 @@ const Marca = require("../models/Marca.js")
 const Modelo = require("../models/Modelo.js")
 const Estado = require("../models/Estado.js")
 const { query } = require("express")
+const axios = require("axios")
 
 class ErrorTraerPorCategoria extends Error {
     constructor(mensaje) {
@@ -72,6 +73,8 @@ console.log("abri la coneccion")
                     JOIN CATEGORIA AS c ON (p.cod_categoria = c.cod_categoria)
                     WHERE c.cod_categoria = ?`
 console.log("pase por aqui")
+
+console.log(await obtenerCambio())
         const values = [cod_categoria]
         
         const [filas, otro] = await connection.query(Query, values)
@@ -89,6 +92,8 @@ console.log("pase por aqui")
             var producto = new Producto (f.cod_producto, f.nom_producto, f.codigo, f.precio,
                                         f.descuento, tipo, modelo, estado, categoria)
 console.log("ya pase")
+
+
                 productos.push(producto.to_json())
                 console.log("ya pase")
     })
@@ -366,8 +371,10 @@ Producto.modificarEstado = async (request, response) => {
             const estadoAnterior = filas[0].cod_estado;
             if (estadoAnterior === 1) {
                 nuevoPrecio = (precioActual.precio * 100) / 95 
+                
             }else if (estadoAnterior === 3){
                 nuevoPrecio = (precioActual.precio *100 /(100 - filas[0].descuento))
+                
             } 
 
 console.log(filas[0].descuento)
@@ -408,6 +415,26 @@ console.log(filas[0].descuento)
         }
     }
 };
+
+async function obtenerCambio () {
+    try{
+
+        console.log(process.env.PASSWORD_BANCO_CENTRAL)
+
+        const fecha = new Date()
+        var dia = String(fecha.getDate()).padStart(2,"0")
+        var mes = String(fecha.getMonth()+1).padStart(2,"0")
+        var anio = fecha.getFullYear()
+        var URL = `https://si3.bcentral.cl/SieteRestWS/SieteRestWS.ashx?user=gio.barra@duocuc.cl&pass=Giovanni*10&firstdate=${anio}-${mes}-${dia}&timeseries=F073.TCO.PRE.Z.D&function=GetSeries`
+        console.log(URL)
+        const valorDolar= await axios.get(URL)
+
+        return valorDolar.data.Series.Obs[0].value
+
+    }catch (error) {
+        return error
+    }
+}
 
 module.exports = Producto
 
