@@ -425,7 +425,7 @@ async function obtenerCambio () {
         var dia = String(fecha.getDate()).padStart(2,"0")
         var mes = String(fecha.getMonth()+1).padStart(2,"0")
         var anio = fecha.getFullYear()
-        var URL = `https://si3.bcentral.cl/SieteRestWS/SieteRestWS.ashx?user=gio.barra@duocuc.cl&pass=Giovanni*10&firstdate=${anio}-${mes}-${dia}&timeseries=F073.TCO.PRE.Z.D&function=GetSeries`
+        var URL = `https://si3.bcentral.cl/SieteRestWS/SieteRestWS.ashx?user=${process.env.USER_BANCO_CENTRAL}&pass=${process.env.PASSWORD_BANCO_CENTRAL}&firstdate=${anio}-${mes}-${dia}&timeseries=F073.TCO.PRE.Z.D&function=GetSeries`
         console.log(URL)
         const valorDolar= await axios.get(URL)
 
