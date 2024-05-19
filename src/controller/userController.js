@@ -47,6 +47,7 @@ User.login = async (request, response) => {
             throw new ErrorLogin("Usuario y/o contraseña invalida")
 
         const tokenPayLoad = {
+            //usuario: { run: usuario.run, nombre: usuario.correo },
             usuario: { nombre: usuario.correo },
             rol: usuario.es_empleado ? "empleado" : "cliente",
             exp: Math.floor(Date.now() / 1000) + Number(process.env.JWT_EXPIRACION)

@@ -3,10 +3,15 @@ const { Router } = require("express");
 const { createOrder, captureOrder, cancelOrder }  = require("../controller/paymentController.js");
 
 
+
+const authenticateToken = require('../middleware/authMiddleware');
+const checkRole = require('../middleware/checkRoleMiddleware.js');
+
+
 const router = Router();
 
-
-router.get('/create-order', createOrder);
+//authenticateToken, checkRole(['cliente'])
+router.post('/create-order', createOrder);
 
 router.get('/capture-order', captureOrder);
 

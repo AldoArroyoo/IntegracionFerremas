@@ -1,10 +1,11 @@
 class Pedido {
-    constructor(cod_pedido, cliente, fecha, total_pedido, estado) {
+    constructor(cod_pedido, cliente, fecha, total_pedido, estado, sucursal) {
         this.cod_pedido = cod_pedido,
         this.fecha = fecha,
         this.total_pedido = total_pedido, 
         this.estado = estado,
         this.cliente = cliente,
+        this.sucursal = sucursal,
         this.detalles = [];
     }
 

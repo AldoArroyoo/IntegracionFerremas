@@ -15,4 +15,6 @@ router.route("/traerPorMarca/:cod")
 router.route("/traerEspecifico/:cod")
     .post(Producto.traerEspecifico)
 
+router.get('/:cod_producto/sucursal/:cod_sucursal', Producto.obtenerPrecioYStock);
+
 module.exports = router

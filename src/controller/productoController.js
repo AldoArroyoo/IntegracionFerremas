@@ -372,5 +372,38 @@ Producto.modificar = async (request, response) => {
             }
         };
 
+Producto.obtenerPrecioYStock = async (req, res) => {
+    
+    const cod_producto = req.params.cod_producto;
+    const cod_sucursal = req.params.cod_sucursal;
 
+    let connection = null;
+
+    try {
+        connection = await abrirConexion();
+
+        const Query = `SELECT p.precio, ds.cantidad
+                    FROM PRODUCTO p
+                    JOIN DETALLE_SUCURSAL ds ON p.cod_producto = ds.cod_producto
+                    WHERE p.cod_producto = ? AND ds.cod_sucursal = ?`;
+
+        const [filas] = await connection.query(Query, [cod_producto, cod_sucursal]);
+
+        if (filas.length === 0) {
+            return res.status(404).json({ mensaje: 'Producto no encontrado en la sucursal especificada' });
+        }
+
+        const { precio, cantidad } = filas[0];
+
+        return res.status(200).json({ precio, cantidad });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ mensaje: 'Error interno del servidor' });
+    } finally {
+        if (connection) {
+            connection.release();
+        }
+    }
+};
 module.exports = Producto

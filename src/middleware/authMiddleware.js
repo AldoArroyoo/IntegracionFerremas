@@ -13,12 +13,13 @@ const authenticateToken = (req, res, next) => {
             return res.status(403).json({ mensaje: 'Token inválido.' });
         }
         
-        // Extraer el rol del token decodificado
-        const { rol } = decodedToken;
+        // Extraer el ID y el rol del token decodificado
+        const { usuario, rol } = decodedToken;
 
         // Adjuntar la información del usuario y su rol al objeto req
         req.user = {
-            nombre: decodedToken.usuario.nombre,
+            run: usuario.run,
+            nombre: usuario.nombre,
             rol: rol
         };
 

@@ -1,7 +1,12 @@
 const { HOST, PAYPAL_API, PAYPAL_API_CLIENT, PAYPAL_API_SECRET } = require("../config.js");
 const axios = require('axios');
+const Pedido = require("../controller/pedidoController.js");
 
 const createOrder = async (req, res) => { 
+    const { cod_pedido, total_pedido } = req.body;
+    if (!total_pedido || isNaN(total_pedido)) {
+            return res.status(400).json({ error: 'Invalid amount' });
+        }
     // Validar que las variables de entorno estén definidas
     if (!HOST || !PAYPAL_API || !PAYPAL_API_CLIENT || !PAYPAL_API_SECRET) {
         return res.status(500).json({ error: 'Configuration error' });
@@ -19,7 +24,7 @@ const createOrder = async (req, res) => {
             {
                 amount: {
                     currency_code: "USD",
-                    value: 100.00
+                    value: total_pedido
                 }
             }
         ],
@@ -27,7 +32,7 @@ const createOrder = async (req, res) => {
             brand_name: "Ferremas",
             landing_page: "NO_PREFERENCE",
             user_action: "PAY_NOW",
-            return_url: `${HOST}/1.0/pagos/capture-order`,
+            return_url: `${HOST}/1.0/pagos/capture-order?cod_pedido=${cod_pedido}`, // Pasar el código del pedido como parámetro en la URL
             cancel_url: `${HOST}/1.0/pagos/cancel-order`
         }
     };
@@ -61,11 +66,11 @@ const createOrder = async (req, res) => {
 };
 
 const captureOrder = async (req, res) => {
-    const { token } = req.query;
+    const { token, cod_pedido } = req.query; // Obtener el código del pedido de los parámetros de la solicitud
 
-    // Validar que el token esté presente
-    if (!token) {
-        return res.status(400).json({ error: 'Missing token' });
+    // Validar que el token y el código del pedido estén presentes
+    if (!token || !cod_pedido) {
+        return res.status(400).json({ error: 'Missing token or cod_pedido' });
     }
 
     try {
@@ -76,9 +81,12 @@ const captureOrder = async (req, res) => {
             }
         });
 
+        // Actualizar el estado del pedido
+        await Pedido.updateEstado({ body: { cod_pedido, estado: true } }, res);
+        // Aquí deberías enviar una respuesta para que la API de pedidos actualice el estado del pedido
+
         console.log(response.data);
         return res.send('Payment successful');
-        //Aqui deberia enviar una respusta para que la api pedidos actualice el estado del pedido
 
     } catch (error) {
         console.error('Error capturing order:', error.response ? error.response.data : error.message);
@@ -87,7 +95,9 @@ const captureOrder = async (req, res) => {
 };
 
 const cancelOrder = (req, res) => {
+    //Reestablecer stock
     return res.send('Payment canceled');
 };
+
 
 module.exports = { createOrder, captureOrder, cancelOrder };
