@@ -8,8 +8,16 @@ content-type: application/json
 
 ###
 
-POST http://localhost:3002/1.0/productos/traerPorEstado/1
+POST http://localhost:3002/1.0/productos/modificarEstado/1
 content-type: application/json
+
+{
+    "nuevo_estado": 1,
+    "nuevo_descuento":5,
+    "nueva_categoria": null
+}
+
+
 
 
 ###

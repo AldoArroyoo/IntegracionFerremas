@@ -6,6 +6,7 @@ const Marca = require("../models/Marca.js")
 const Modelo = require("../models/Modelo.js")
 const Estado = require("../models/Estado.js")
 const { query } = require("express")
+const axios = require("axios")
 const axios = require('axios')
 
 class ErrorTraerPorCategoria extends Error {
@@ -33,6 +34,13 @@ class ErrorTraerEspecifico extends Error {
     constructor(mensaje) {
         super(mensaje);
         this.name = "ErrorTraerEspecifico";
+    }
+}
+
+class ErrorModificarEstado extends Error {
+    constructor(mensaje) {
+        super(mensaje);
+        this.name = "ErrorModificarEstado";
     }
 }
 
@@ -66,6 +74,8 @@ console.log("abri la coneccion")
                     JOIN CATEGORIA AS c ON (p.cod_categoria = c.cod_categoria)
                     WHERE c.cod_categoria = ?`
 console.log("pase por aqui")
+
+console.log(await obtenerCambio())
         const values = [cod_categoria]
         
         const [filas, otro] = await connection.query(Query, values)
@@ -83,6 +93,8 @@ console.log("pase por aqui")
             var producto = new Producto (f.cod_producto, f.nom_producto, f.codigo, f.precio,
                                         f.descuento, tipo, modelo, estado, categoria)
 console.log("ya pase")
+
+
                 productos.push(producto.to_json())
                 console.log("ya pase")
     })
@@ -337,42 +349,93 @@ console.log(error)
 };
 
 
-
-Producto.modificar = async (request, response) => {
-    const { cod_estado, precio, descuento, cod_producto } = request.body
-    
+Producto.modificarEstado = async (request, response) => {
+    const cod_producto = request.params.cod
+    const { nuevo_estado, nuevo_descuento, nueva_categoria } = request.body
     var connection = null
 
     try {
         connection = await abrirConexion()
-
-        var Query = `UPDATE PRODUCTO
-                    SET cod_estado = ?, precio = ?, descuento = ?
-                    WHERE cod_producto = ?`
         
-        values = [cod_estado, precio, descuento, cod_producto]
+        // Obtener el precio actual del producto y su categoria
+        const precioQuery = `SELECT precio, cod_estado, descuento FROM PRODUCTO WHERE cod_producto = ?`
+        const values = [cod_producto]
+        const [filas, otros] = await connection.query(precioQuery, values)
+        const precioActual = filas[0].precio
+        const estadoAnterior = filas[0].cod_estado
+        const descuentoActual = filas[0].descuento
+        const porcentajeFaltante = 100 - descuentoActual
+        
+        console.log(precioActual)
 
-        const [filas, otro] = await connection.query(Query, values)
+        if (nuevo_estado === 1 || nuevo_estado === 3) {
+            const estadoAnteriorQuery = `SELECT precio FROM PRODUCTO WHERE cod_producto = ?`
+            const values2 = [cod_producto]
+            const [filas1, otros] = await connection.query(estadoAnteriorQuery, values2)
+            const precioAnterior = filas1[0].precio
+            nuevoPrecio = precioAnterior * nuevo_descuento / 100
+            if (estadoAnterior === 1){
+                nuevoPrecio = (precioActual * 100 / porcentajeFaltante) * (nuevo_descuento/100)
+            }else if (estadoAnterior === 3){
+                nuevoPrecio = (precioAnterior * 100 / porcentajeFaltante) * (nuevo_descuento/100)
+            }else if (estadoAnterior === 2){
+                nuevoPrecio = precioActual * ((100 - nuevo_descuento)/100)
+            }
 
+        }else if (nuevo_estado === 2){
+            const estadoAnteriorQuery = `SELECT precio FROM PRODUCTO WHERE cod_producto = ?`
+            const values3 = [cod_producto]
+            const [filas2, otros] = await connection.query(estadoAnteriorQuery, values3)
+            const precioAnterior = filas2[0].precio
+            nuevoPrecio = precioAnterior * 100 / porcentajeFaltante
+        }
+
+        // Actualizar el estado y el precio del producto
+        const updateQuery = `UPDATE PRODUCTO SET cod_estado = ?, precio = ?, descuento = ?, cod_categoria = ? WHERE cod_producto = ?`;
+        const [resultado] = await connection.query(updateQuery, [nuevo_estado, nuevoPrecio, nuevo_descuento, nueva_categoria, cod_producto]);
+
+        if (resultado.affectedRows === 0) {
+            throw new ErrorModificarEstado("No se encontrÃ³ el producto o no se pudo actualizar el estado");
+        }
+
+        return response.status(202).json("Estado del producto actualizado correctamente" );
     } catch (error) {
         console.log(error)
-                if (error instanceof ErrorDBA) {
-                    return response.status(500).json(error.message)
-        
-                }else if (error instanceof ErrorTraerEspecifico) {
-                    return response.status(500).json(error.message)
-        
-                } else {
-                    return response.status(500).json(error)
-                }
-            }
-            finally {
-                if (connection) {
-                    connection.release()
-                }
-            }
-        };
+        if (error instanceof ErrorDBA) {
+            return response.status(500).json(error.message)
 
+        } else if (error instanceof ErrorModificarEstado) {
+            return response.status(500).json(error.message)
+
+        } else {
+            return response.status(500).json(error)
+        }
+    } finally {
+        if (connection) {
+            connection.release()
+        }
+    }
+};
+
+async function obtenerCambio () {
+    try{
+
+        console.log(process.env.PASSWORD_BANCO_CENTRAL)
+
+        const fecha = new Date()
+        var dia = String(fecha.getDate()).padStart(2,"0")
+        var mes = String(fecha.getMonth()+1).padStart(2,"0")
+        var anio = fecha.getFullYear()
+        var URL = `https://si3.bcentral.cl/SieteRestWS/SieteRestWS.ashx?user=${process.env.USER_BANCO_CENTRAL}&pass=${process.env.PASSWORD_BANCO_CENTRAL}&firstdate=${anio}-${mes}-${dia}&timeseries=F073.TCO.PRE.Z.D&function=GetSeries`
+        console.log(URL)
+        const valorDolar= await axios.get(URL)
+
+        return valorDolar.data.Series.Obs[0].value
+
+    }catch (error) {
+        return error
+    }
+}
 Producto.obtenerPrecioYStock = async (req, res) => {
     
     const cod_producto = req.params.cod_producto;
@@ -517,3 +580,7 @@ Producto.obtenerHistorialPrecios = async (req, res) => {
 };
 
 module.exports = { obtenerCambio, Producto };
+
+
+
+
