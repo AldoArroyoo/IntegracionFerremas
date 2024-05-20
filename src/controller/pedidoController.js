@@ -1,5 +1,7 @@
 const { abrirConexion } = require("../database.js");
 const Pedido = require("../models/Pedido.js");
+
+const { obtenerCambio } = require("./productoController.js");
 const DetallePedido = require("../models/DetallePedido.js");
 const axios = require('axios');
 
@@ -42,7 +44,16 @@ Pedido.crearPedido = async (req, res) => {
 
         pedido.detalles = detallesPedido;
 
-        res.status(201).json(pedido);
+        const usd = await obtenerCambio();
+
+        pedido.precio_usd = usd;
+
+        const total_usd = (pedido.total_pedido / usd).toFixed(2);
+
+        const total_usd_number = parseFloat(total_usd);
+
+        // Enviar respuesta con el objeto pedido y el valor total en USD como un número
+        res.status(201).json({ pedido, total_usd: total_usd_number });
 
     } catch (error) {
         console.error(error);
@@ -67,7 +78,7 @@ Pedido.crearPedido = async (req, res) => {
         }
     } finally {
         if (connection) {
-            await connection.release(); // Usar release() en lugar de end()
+            await connection.release();
         }
     }
 };
@@ -112,6 +123,11 @@ const procesarDetalles = async (connection, detalles, pedido, sucursal) => {
         pedido.agregarDetalle(detallePedido);
 
         await connection.execute(sqlDetalle, [detallePedido.pedido, detallePedido.producto, detallePedido.cantidad, detallePedido.precio, detallePedido.total_detalle]);
+
+        // Actualiza el pedido para que tenga el total calculado al crear los detalles
+        const sqlUpdatePedido = 'UPDATE DETALLE_SUCURSAL SET cantidad = cantidad - ? WHERE cod_producto = ? AND cod_sucursal = ?';
+        await connection.execute(sqlUpdatePedido, [detallePedido.cantidad, detallePedido.producto, sucursal]);
+
 
         total_pedido += detallePedido.total_detalle;
     }
@@ -166,6 +182,70 @@ Pedido.getPedido = async (cod_pedido) => {
     }
 };
 
-//Pedido.getPedido = getPedido;
+Pedido.eliminarPedido = async (req, res) => {
+    let connection; // Declara la conexión aquí
+
+    try {
+        const { cod_pedido } = req.params; // Obtener el cod_pedido de los parámetros de la URL
+
+        connection = await abrirConexion(); // Inicializa la conexión
+
+        // Verificar si el pedido existe antes de continuar
+        const [pedidoExists] = await connection.execute('SELECT 1 FROM PEDIDO WHERE cod_pedido = ?', [cod_pedido]);
+        if (pedidoExists.length === 0) {
+            throw new Error('El pedido no existe');
+        }
+
+        // Llamar a la función descartarDetalles para revertir el stock de productos
+        await descartarDetalles(connection, cod_pedido); // Pasa la conexión como primer parámetro y el código del pedido como segundo parámetro
+
+        // Eliminar el pedido
+        const sqlDeletePedido = 'DELETE FROM PEDIDO WHERE cod_pedido = ?';
+        await connection.execute(sqlDeletePedido, [cod_pedido]);
+
+        console.log("Pedido eliminado con éxito");
+        res.status(200).json({ message: 'Pedido eliminado con éxito' });
+    } catch (error) {
+        console.error('Error deleting order:', error);
+        res.status(500).json({ error: error.message }); // Enviar el mensaje de error en la respuesta
+    } finally {
+        if (connection) {
+            await connection.release(); // Libera la conexión en caso de error o éxito
+        }
+    }
+};
+
+
+//Esta funcion revierte el estock de todos los detalle de un pedidio y los elimina
+async function descartarDetalles(connection, cod_pedido) {
+    try {
+
+        if (!cod_pedido) {
+            throw new Error('cod_pedido is undefined');
+        }
+        
+        // Obtener la sucursal del pedido
+        const sucursal = await connection.execute('SELECT cod_sucursal FROM PEDIDO WHERE cod_pedido = ?', [cod_pedido]);
+
+        // Obtener los detalles del pedido
+        const [detallesPedido] = await connection.execute('SELECT * FROM DETALLE_PEDIDO WHERE cod_pedido = ?', [cod_pedido]);
+
+        // Iterar sobre cada detalle del pedido para actualizar el stock en DETALLE_SUCURSAL
+        for (const detalle of detallesPedido) {
+            const { cod_producto, cantidad } = detalle;
+            // Actualizar el stock en DETALLE_SUCURSAL para el producto y la sucursal correspondiente
+            const sqlUpdateStock = 'UPDATE DETALLE_SUCURSAL SET cantidad = cantidad + ? WHERE cod_producto = ? AND cod_sucursal = ?';
+            await connection.execute(sqlUpdateStock, [cantidad, cod_producto, sucursal[0][0].cod_sucursal]);
+        }
+
+        // Eliminar los detalles del pedido
+        const sqlDeleteDetalle = 'DELETE FROM DETALLE_PEDIDO WHERE cod_pedido = ?';
+        await connection.execute(sqlDeleteDetalle, [cod_pedido]);
+
+        console.log("Stock restaurado");
+    } catch (error) {
+        throw new Error('Error incrementing product stock: ' + error.message);
+    }
+}
 
 module.exports = Pedido;

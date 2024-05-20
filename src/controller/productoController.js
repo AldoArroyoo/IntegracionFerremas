@@ -6,6 +6,7 @@ const Marca = require("../models/Marca.js")
 const Modelo = require("../models/Modelo.js")
 const Estado = require("../models/Estado.js")
 const { query } = require("express")
+const axios = require('axios')
 
 class ErrorTraerPorCategoria extends Error {
     constructor(mensaje) {
@@ -406,4 +407,64 @@ Producto.obtenerPrecioYStock = async (req, res) => {
         }
     }
 };
-module.exports = Producto
+
+
+async function obtenerCambio () {
+    try{
+
+        //console.log(process.env.PASSWORD_BANCO_CENTRAL)
+
+        const fecha = new Date()
+        var dia = String(fecha.getDate()).padStart(2,"0")
+        var mes = String(fecha.getMonth()+1).padStart(2,"0")
+        var anio = fecha.getFullYear()
+        var URL = `https://si3.bcentral.cl/SieteRestWS/SieteRestWS.ashx?user=${process.env.USER_BANCO_CENTRAL}&pass=${process.env.PASSWORD_BANCO_CENTRAL}&firstdate=${anio}-${mes}-${dia}&timeseries=F073.TCO.PRE.Z.D&function=GetSeries`
+        //console.log(URL)
+        const valorDolar= await axios.get(URL)
+
+        return valorDolar.data.Series.Obs[0].value
+
+    }catch (error) {
+        return error
+    }
+}
+
+Producto.obtenerStock = async (req, res) => {
+    const cod_sucursal = req.params.cod_sucursal;
+
+    let connection = null;
+
+    try {
+        connection = await abrirConexion();
+
+        const Query = `SELECT p.cod_producto, p.nom_producto, p.precio, ds.cantidad
+                    FROM PRODUCTO p
+                    JOIN DETALLE_SUCURSAL ds ON p.cod_producto = ds.cod_producto
+                    WHERE ds.cod_sucursal = ?`;
+
+        const [filas] = await connection.query(Query, [cod_sucursal]);
+
+        if (filas.length === 0) {
+            return res.status(404).json({ mensaje: 'No hay productos disponibles en la sucursal especificada' });
+        }
+
+        const productos = filas.map(({ cod_producto, nombre, precio, cantidad }) => ({
+            cod_producto,
+            nombre,
+            precio,
+            cantidad
+        }));
+
+        return res.status(200).json({ productos });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ mensaje: 'Error interno del servidor' });
+    } finally {
+        if (connection) {
+            connection.release();
+        }
+    }
+};
+
+module.exports = { obtenerCambio, Producto };

@@ -1,6 +1,7 @@
 const { HOST, PAYPAL_API, PAYPAL_API_CLIENT, PAYPAL_API_SECRET } = require("../config.js");
 const axios = require('axios');
 const Pedido = require("../controller/pedidoController.js");
+const { Producto } = require("./productoController.js");
 
 const createOrder = async (req, res) => { 
     const { cod_pedido, total_pedido } = req.body;
@@ -67,6 +68,7 @@ const createOrder = async (req, res) => {
 
 const captureOrder = async (req, res) => {
     const { token, cod_pedido } = req.query; // Obtener el código del pedido de los parámetros de la solicitud
+    
 
     // Validar que el token y el código del pedido estén presentes
     if (!token || !cod_pedido) {

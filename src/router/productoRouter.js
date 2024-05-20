@@ -1,4 +1,4 @@
-const Producto = require ("../controller/productoController.js")
+const { Producto } = require ("../controller/productoController.js")
 const {Router} = require ("express")
 
 const router = Router()
@@ -16,5 +16,7 @@ router.route("/traerEspecifico/:cod")
     .post(Producto.traerEspecifico)
 
 router.get('/:cod_producto/sucursal/:cod_sucursal', Producto.obtenerPrecioYStock);
+
+router.get('/sucursal/:cod_sucursal', Producto.obtenerStock);
 
 module.exports = router
