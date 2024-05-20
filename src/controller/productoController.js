@@ -7,7 +7,6 @@ const Modelo = require("../models/Modelo.js")
 const Estado = require("../models/Estado.js")
 const { query } = require("express")
 const axios = require("axios")
-const axios = require('axios')
 
 class ErrorTraerPorCategoria extends Error {
     constructor(mensaje) {
