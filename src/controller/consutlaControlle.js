@@ -1,8 +1,7 @@
 const { abrirConexion } = require("../database.js");
 
 const Consulta = {};
-// 1. Crear una consulta (por parte de un cliente)
-// 1. Crear una consulta (por parte de un cliente)
+
 Consulta.crearConsulta = async (req, res) => {
     let connection;
     try {
