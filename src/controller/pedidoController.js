@@ -248,4 +248,53 @@ async function descartarDetalles(connection, cod_pedido) {
     }
 }
 
+
+Pedido.obtenerHistorialPrecios = async (req, res) => {
+    let connection;
+    try {
+        const { cod_producto } = req.params;
+
+        if (!cod_producto) {
+            return res.status(400).json({ mensaje: 'El código del producto es requerido' });
+        }
+
+        connection = await abrirConexion();
+
+        // Consulta para obtener los detalles de los pedidos con la fecha del pedido para un producto específico
+        const sqlHistorialPrecios = `
+            SELECT DP.cod_producto, P.fecha, DP.precio
+            FROM DETALLE_PEDIDO DP
+            JOIN PEDIDO P ON DP.cod_pedido = P.cod_pedido
+            WHERE DP.cod_producto = ?
+            ORDER BY P.fecha;
+        `;
+        const [result] = await connection.execute(sqlHistorialPrecios, [cod_producto]);
+
+        if (result.length === 0) {
+            return res.status(404).json({ mensaje: 'No se encontraron registros en el historial de precios para el producto especificado' });
+        }
+
+        // Procesar los resultados para obtener solo los cambios de precio
+        const historialPrecios = [];
+        let ultimoPrecio = null;
+
+        for (const row of result) {
+            const { fecha, precio } = row;
+
+            if (ultimoPrecio !== precio) {
+                historialPrecios.push({ fecha, precio });
+                ultimoPrecio = precio;
+            }
+        }
+
+        res.status(200).json(historialPrecios);
+    } catch (error) {
+        console.error('Error al obtener el historial de precios:', error);
+        res.status(500).json({ mensaje: 'Error interno del servidor' });
+    } finally {
+        if (connection) {
+            await connection.release();
+        }
+    }
+};
 module.exports = Pedido;
