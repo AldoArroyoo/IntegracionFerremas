@@ -350,51 +350,51 @@ console.log(error)
 
 Producto.modificarEstado = async (request, response) => {
     const cod_producto = request.params.cod
-    const { nuevo_estado, nuevo_descuento } = request.body
+    const { nuevo_estado, nuevo_descuento, nueva_categoria } = request.body
     var connection = null
 
     try {
         connection = await abrirConexion()
-
-        // Obtener el precio actual del producto
-        var precioQuery = `SELECT precio FROM PRODUCTO WHERE cod_producto = ?`
+        
+        // Obtener el precio actual del producto y su categoria
+        const precioQuery = `SELECT precio, cod_estado, descuento FROM PRODUCTO WHERE cod_producto = ?`
         const values = [cod_producto]
         const [filas, otros] = await connection.query(precioQuery, values)
-        const precioActual = filas[0]
+        const precioActual = filas[0].precio
+        const estadoAnterior = filas[0].cod_estado
+        const descuentoActual = filas[0].descuento
+        const porcentajeFaltante = 100 - descuentoActual
+        
+        console.log(precioActual)
 
-        // Calcular el nuevo precio si el estado pasa de 1 a 2
-        var nuevoPrecio = precioActual.precio
-        if (nuevo_estado === 2) {
-            const estadoAnteriorQuery = `SELECT cod_estado, descuento FROM PRODUCTO WHERE cod_producto = ?`
-            values2 = [cod_producto]
-            const [filas, otros] = await connection.query(estadoAnteriorQuery, values2);
-            const estadoAnterior = filas[0].cod_estado;
-            if (estadoAnterior === 1) {
-                nuevoPrecio = (precioActual.precio * 100) / 95 
-                
+        if (nuevo_estado === 1 || nuevo_estado === 3) {
+            const estadoAnteriorQuery = `SELECT precio FROM PRODUCTO WHERE cod_producto = ?`
+            const values2 = [cod_producto]
+            const [filas1, otros] = await connection.query(estadoAnteriorQuery, values2)
+            const precioAnterior = filas1[0].precio
+            nuevoPrecio = precioAnterior * nuevo_descuento / 100
+            if (estadoAnterior === 1){
+                nuevoPrecio = (precioActual * 100 / porcentajeFaltante) * (nuevo_descuento/100)
             }else if (estadoAnterior === 3){
-                nuevoPrecio = (precioActual.precio *100 /(100 - filas[0].descuento))
-                
-            } 
-
-console.log(filas[0].descuento)
-
-        } else if (nuevo_estado === 3) {
-            const estadoAnteriorQuery = `SELECT cod_estado FROM PRODUCTO WHERE cod_producto = ?`
-            values3 = [cod_producto]
-            const [filas, otros] = await connection.query(estadoAnteriorQuery, values3)
-            const estadoAnterior = filas[0].cod_estado
-            if (estadoAnterior === 1 || estadoAnterior === 2) {
-                nuevoPrecio = precioActual.precio - (precioActual.precio * (nuevo_descuento/100))
+                nuevoPrecio = (precioAnterior * 100 / porcentajeFaltante) * (nuevo_descuento/100)
+            }else if (estadoAnterior === 2){
+                nuevoPrecio = precioActual * ((100 - nuevo_descuento)/100)
             }
+
+        }else if (nuevo_estado === 2){
+            const estadoAnteriorQuery = `SELECT precio FROM PRODUCTO WHERE cod_producto = ?`
+            const values3 = [cod_producto]
+            const [filas2, otros] = await connection.query(estadoAnteriorQuery, values3)
+            const precioAnterior = filas2[0].precio
+            nuevoPrecio = precioAnterior * 100 / porcentajeFaltante
         }
 
         // Actualizar el estado y el precio del producto
-        const updateQuery = `UPDATE PRODUCTO SET cod_estado = ?, precio = ?, descuento = ? WHERE cod_producto = ?`;
-        const [resultado] = await connection.query(updateQuery, [nuevo_estado, nuevoPrecio, nuevo_descuento, cod_producto]);
+        const updateQuery = `UPDATE PRODUCTO SET cod_estado = ?, precio = ?, descuento = ?, cod_categoria = ? WHERE cod_producto = ?`;
+        const [resultado] = await connection.query(updateQuery, [nuevo_estado, nuevoPrecio, nuevo_descuento, nueva_categoria, cod_producto]);
 
         if (resultado.affectedRows === 0) {
-            throw new ErrorModificarEstado("No se encontró el producto o no se pudo actualizar el estado");
+            throw new ErrorModificarEstado("No se encontrÃ³ el producto o no se pudo actualizar el estado");
         }
 
         return response.status(202).json("Estado del producto actualizado correctamente" );
