@@ -134,13 +134,13 @@ const procesarDetalles = async (connection, detalles, pedido, sucursal) => {
     return total_pedido;
 };
 
-Pedido.updateEstado = async (req, res) => {
+Pedido.updateEstado = async (req) => {
     let connection;
     try {
         const { cod_pedido, estado } = req.body;
 
         if (!cod_pedido || typeof estado !== 'boolean') {
-            return res.status(400).json({ mensaje: 'Código de pedido y estado son requeridos' });
+            throw new Error('Código de pedido y estado son requeridos');
         }
 
         connection = await abrirConexion();
@@ -148,20 +148,20 @@ Pedido.updateEstado = async (req, res) => {
         const [result] = await connection.execute(sqlUpdateEstado, [estado, cod_pedido]);
 
         if (result.affectedRows === 0) {
-            return res.status(404).json({ mensaje: 'Pedido no encontrado' });
+            throw new Error('Pedido no encontrado');
         }
 
-        res.status(200).json({ mensaje: 'Estado del pedido actualizado correctamente' });
+        return { mensaje: 'Estado del pedido actualizado correctamente' };
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ mensaje: 'Error actualizando el estado del pedido' });
+        throw error;
     } finally {
         if (connection) {
             await connection.release();
         }
     }
 };
+
 
 Pedido.getPedido = async (cod_pedido) => {
     let connection;

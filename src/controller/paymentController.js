@@ -57,18 +57,19 @@ const createOrder = async (req, res) => {
         });
 
         console.log(response.data);
-        //return res.json(response.data);
-        return res.redirect(response.data.links[1].href);
+         // Buscar el enlace de aprobación en los links de respuesta
+        const approvalLink = response.data.links.find(link => link.rel === 'approve').href;
+        
+         // Retornar el enlace de aprobación en formato JSON
+        return res.json({ approvalLink });
 
     } catch (error) {
         console.error('Error creating order:', error.response ? error.response.data : error.message);
         return res.status(500).json({ error: 'Error creating order' });
     }
 };
-
 const captureOrder = async (req, res) => {
     const { token, cod_pedido } = req.query; // Obtener el código del pedido de los parámetros de la solicitud
-    
 
     // Validar que el token y el código del pedido estén presentes
     if (!token || !cod_pedido) {
@@ -84,17 +85,30 @@ const captureOrder = async (req, res) => {
         });
 
         // Actualizar el estado del pedido
-        await Pedido.updateEstado({ body: { cod_pedido, estado: true } }, res);
-        // Aquí deberías enviar una respuesta para que la API de pedidos actualice el estado del pedido
-
-        console.log(response.data);
-        return res.send('Payment successful');
+        try {
+            const updateResult = await Pedido.updateEstado({ body: { cod_pedido, estado: true } });
+            console.log(updateResult.mensaje);
+            console.log(response.data);
+            return res.send('Payment successful');
+        } catch (updateError) {
+            console.error('Error updating order status:', updateError.message);
+            return res.status(500).json({ error: updateError.message });
+        }
 
     } catch (error) {
         console.error('Error capturing order:', error.response ? error.response.data : error.message);
+
+        // Si el error es de PayPal, retornar un mensaje de error específico
+        if (error.response && error.response.data) {
+            return res.status(error.response.status).json({ error: error.response.data });
+        }
+
+        // Si el error es desconocido, retornar un mensaje genérico
         return res.status(500).json({ error: 'Error capturing order' });
     }
 };
+
+
 
 const cancelOrder = (req, res) => {
     //Reestablecer stock
