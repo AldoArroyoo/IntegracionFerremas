@@ -204,39 +204,6 @@ Pedido.buscarPedido = async (req, res) => {
     }
 };
 
-Pedido.eliminarPedido = async (req, res) => {
-    let connection; // Declara la conexión aquí
-
-    try {
-        const { cod_pedido } = req.params; // Obtener el cod_pedido de los parámetros de la URL
-
-        connection = await abrirConexion(); // Inicializa la conexión
-
-        // Verificar si el pedido existe antes de continuar
-        const [pedidoExists] = await connection.execute('SELECT 1 FROM PEDIDO WHERE cod_pedido = ?', [cod_pedido]);
-        if (pedidoExists.length === 0) {
-            throw new Error('El pedido no existe');
-        }
-
-        // Llamar a la función descartarDetalles para revertir el stock de productos
-        await descartarDetalles(connection, cod_pedido); // Pasa la conexión como primer parámetro y el código del pedido como segundo parámetro
-
-        // Eliminar el pedido
-        const sqlDeletePedido = 'DELETE FROM PEDIDO WHERE cod_pedido = ?';
-        await connection.execute(sqlDeletePedido, [cod_pedido]);
-
-        console.log("Pedido eliminado con éxito");
-        res.status(200).json({ message: 'Pedido eliminado con éxito' });
-    } catch (error) {
-        console.error('Error deleting order:', error);
-        res.status(500).json({ error: error.message }); // Enviar el mensaje de error en la respuesta
-    } finally {
-        if (connection) {
-            await connection.release(); // Libera la conexión en caso de error o éxito
-        }
-    }
-};
-
 
 //Esta funcion revierte el estock de todos los detalle de un pedidio y los elimina
 async function descartarDetalles(connection, cod_pedido) {

@@ -349,44 +349,35 @@ console.log(error)
 
 
 Producto.modificarEstado = async (request, response) => {
-    const cod_producto = request.params.cod
-    const { nuevo_estado, nuevo_descuento, nueva_categoria } = request.body
-    var connection = null
+    const { nuevo_estado, nuevo_descuento, nueva_categoria, cod_producto } = request.body;
+    var connection = null;
 
     try {
-        connection = await abrirConexion()
-        
-        // Obtener el precio actual del producto y su categoria
-        const precioQuery = `SELECT precio, cod_estado, descuento FROM PRODUCTO WHERE cod_producto = ?`
-        const values = [cod_producto]
-        const [filas, otros] = await connection.query(precioQuery, values)
-        const precioActual = filas[0].precio
-        const estadoAnterior = filas[0].cod_estado
-        const descuentoActual = filas[0].descuento
-        const porcentajeFaltante = 100 - descuentoActual
-        
-        console.log(precioActual)
+        connection = await abrirConexion();
+
+        // Obtener el precio actual del producto y su estado y descuento actuales
+        const precioQuery = `SELECT precio, cod_estado, descuento FROM PRODUCTO WHERE cod_producto = ?`;
+        const values = [cod_producto];
+        const [filas] = await connection.query(precioQuery, values);
+        const precioActual = filas[0].precio;
+        const estadoAnterior = filas[0].cod_estado;
+        const descuentoActual = filas[0].descuento;
+        const porcentajeFaltante = 100 - descuentoActual;
+
+        let nuevoPrecio;
 
         if (nuevo_estado === 1 || nuevo_estado === 3) {
-            const estadoAnteriorQuery = `SELECT precio FROM PRODUCTO WHERE cod_producto = ?`
-            const values2 = [cod_producto]
-            const [filas1, otros] = await connection.query(estadoAnteriorQuery, values2)
-            const precioAnterior = filas1[0].precio
-            nuevoPrecio = precioAnterior * nuevo_descuento / 100
-            if (estadoAnterior === 1){
-                nuevoPrecio = (precioActual * 100 / porcentajeFaltante) * (nuevo_descuento/100)
-            }else if (estadoAnterior === 3){
-                nuevoPrecio = (precioAnterior * 100 / porcentajeFaltante) * (nuevo_descuento/100)
-            }else if (estadoAnterior === 2){
-                nuevoPrecio = precioActual * ((100 - nuevo_descuento)/100)
+            if (estadoAnterior === 1 || estadoAnterior === 3) {
+                nuevoPrecio = (precioActual * 100 / porcentajeFaltante) * (1 - nuevo_descuento / 100);
+            } else if (estadoAnterior === 2) {
+                nuevoPrecio = precioActual * (1 - nuevo_descuento / 100);
             }
-
-        }else if (nuevo_estado === 2){
-            const estadoAnteriorQuery = `SELECT precio FROM PRODUCTO WHERE cod_producto = ?`
-            const values3 = [cod_producto]
-            const [filas2, otros] = await connection.query(estadoAnteriorQuery, values3)
-            const precioAnterior = filas2[0].precio
-            nuevoPrecio = precioAnterior * 100 / porcentajeFaltante
+        } else if (nuevo_estado === 2) {
+            if (estadoAnterior === 1 || estadoAnterior === 3) {
+                nuevoPrecio = precioActual * 100 / porcentajeFaltante;
+            } else {
+                nuevoPrecio = precioActual;
+            }
         }
 
         // Actualizar el estado y el precio del producto
@@ -394,24 +385,22 @@ Producto.modificarEstado = async (request, response) => {
         const [resultado] = await connection.query(updateQuery, [nuevo_estado, nuevoPrecio, nuevo_descuento, nueva_categoria, cod_producto]);
 
         if (resultado.affectedRows === 0) {
-            throw new ErrorModificarEstado("No se encontrÃ³ el producto o no se pudo actualizar el estado");
+            throw new ErrorModificarEstado("No se encontró el producto o no se pudo actualizar el estado");
         }
 
-        return response.status(202).json("Estado del producto actualizado correctamente" );
+        return response.status(202).json("Estado del producto actualizado correctamente");
     } catch (error) {
-        console.log(error)
+        console.log(error);
         if (error instanceof ErrorDBA) {
-            return response.status(500).json(error.message)
-
+            return response.status(500).json(error.message);
         } else if (error instanceof ErrorModificarEstado) {
-            return response.status(500).json(error.message)
-
+            return response.status(500).json(error.message);
         } else {
-            return response.status(500).json(error)
+            return response.status(500).json(error);
         }
     } finally {
         if (connection) {
-            connection.release()
+            connection.release();
         }
     }
 };
@@ -490,44 +479,6 @@ async function obtenerCambio () {
         return error
     }
 }
-
-Producto.obtenerStock = async (req, res) => {
-    const cod_sucursal = req.params.cod_sucursal;
-
-    let connection = null;
-
-    try {
-        connection = await abrirConexion();
-
-        const Query = `SELECT p.cod_producto, p.nom_producto, p.precio, ds.cantidad
-                    FROM PRODUCTO p
-                    JOIN DETALLE_SUCURSAL ds ON p.cod_producto = ds.cod_producto
-                    WHERE ds.cod_sucursal = ?`;
-
-        const [filas] = await connection.query(Query, [cod_sucursal]);
-
-        if (filas.length === 0) {
-            return res.status(404).json({ mensaje: 'No hay productos disponibles en la sucursal especificada' });
-        }
-
-        const productos = filas.map(({ cod_producto, nombre, precio, cantidad }) => ({
-            cod_producto,
-            nombre,
-            precio,
-            cantidad
-        }));
-
-        return res.status(200).json({ productos });
-
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ mensaje: 'Error interno del servidor' });
-    } finally {
-        if (connection) {
-            connection.release();
-        }
-    }
-};
 
 Producto.obtenerHistorialPrecios = async (req, res) => {
     let connection;

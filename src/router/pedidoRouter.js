@@ -8,14 +8,11 @@ const router = Router()
 
 
 // Ruta para crear un nuevo pedido
-router.post("/", authenticateToken, checkRole(['cliente']), Pedido.crearPedido);
-
-// Ruta para eliminar un pedido
-router.delete("/:cod_pedido", authenticateToken, checkRole(['cliente']), Pedido.eliminarPedido);
+router.post("/", authenticateToken, Pedido.crearPedido);
 
 
 // Ruta para obtener un pedido específico
-router.get("/:cod_pedido", authenticateToken, checkRole(['cliente']), Pedido.buscarPedido);
+router.get("/:cod_pedido", authenticateToken, Pedido.buscarPedido);
 
 
 

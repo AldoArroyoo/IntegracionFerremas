@@ -17,12 +17,11 @@ router.route("/traerEspecifico/:cod")
 
 router.get('/:cod_producto/sucursal/:cod_sucursal', Producto.obtenerPrecioYStock);
 
-router.get('/sucursal/:cod_sucursal', Producto.obtenerStock);
 
 // Ruta para obtener el historial de precios de un producto específico
 router.get('/historial-precios/:cod_producto', Producto.obtenerHistorialPrecios);
 
-router.route("/modificarEstado/:cod")
+router.route("/modificarEstado")
     .post(Producto.modificarEstado)
 
 module.exports = router
