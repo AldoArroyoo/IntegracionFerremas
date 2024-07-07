@@ -14,5 +14,9 @@ router.post("/", authenticateToken, checkRole(['cliente']), Pedido.crearPedido);
 router.delete("/:cod_pedido", authenticateToken, checkRole(['cliente']), Pedido.eliminarPedido);
 
 
+// Ruta para obtener un pedido específico
+router.get("/:cod_pedido", authenticateToken, checkRole(['cliente']), Pedido.buscarPedido);
+
+
 
 module.exports = router;

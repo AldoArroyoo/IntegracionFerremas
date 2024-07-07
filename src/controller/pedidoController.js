@@ -162,19 +162,41 @@ Pedido.updateEstado = async (req) => {
     }
 };
 
-
-Pedido.getPedido = async (cod_pedido) => {
+Pedido.buscarPedido = async (req, res) => {
     let connection;
+
     try {
+        const { cod_pedido } = req.params;
+
         connection = await abrirConexion();
-        const [result] = await connection.execute('SELECT * FROM PEDIDO WHERE cod_pedido = ?', [cod_pedido]);
-        if (result.length === 0) {
-            return null;
+
+        // Buscar el pedido por el código de pedido
+        const [pedidoResult] = await connection.execute('SELECT * FROM PEDIDO WHERE cod_pedido = ?', [cod_pedido]);
+
+        if (pedidoResult.length === 0) {
+            return res.status(404).json({ mensaje: 'Pedido no encontrado' });
         }
-        return result[0];
+
+        const pedido = pedidoResult[0];
+
+        // Buscar los detalles del pedido
+        const [detallesPedido] = await connection.execute('SELECT * FROM DETALLE_PEDIDO WHERE cod_pedido = ?', [cod_pedido]);
+
+        pedido.detalles = detallesPedido;
+
+        // Enviar respuesta con el objeto pedido
+        res.status(200).json({ pedido });
+
     } catch (error) {
         console.error(error);
-        throw new Error('Error al obtener el pedido');
+
+        if (connection) await connection.rollback();
+
+        if (error.message.includes('timeout')) {
+            res.status(503).json({ mensaje: 'Timeout de conexión a la base de datos' });
+        } else {
+            res.status(500).json({ mensaje: 'Error interno del servidor' });
+        }
     } finally {
         if (connection) {
             await connection.release();
