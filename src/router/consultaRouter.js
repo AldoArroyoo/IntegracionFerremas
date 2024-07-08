@@ -8,9 +8,9 @@ const Consulta = require('../controller/consutlaControlle.js');
 const router = Router()
 
 
-router.post('/', Consulta.crearConsulta);
-router.get('/sin-respuesta', Consulta.obtenerConsultasSinRespuesta);
-router.put('/responder', Consulta.responderConsulta);
-router.get('/con-respuesta', Consulta.obtenerConsultasConRespuesta);
+router.post('/', authenticateToken,  checkRole(['cliente']), Consulta.crearConsulta);
+router.get('/sin-respuesta', authenticateToken, checkRole(['empleado']), Consulta.obtenerConsultasSinRespuesta);
+router.put('/responder',authenticateToken, checkRole(['empleado']), Consulta.responderConsulta);
+router.get('/con-respuesta', authenticateToken, checkRole(['empleado']), Consulta.obtenerConsultasConRespuesta);
 
 module.exports = router;
